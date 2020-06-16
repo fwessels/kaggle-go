@@ -1,9 +1,14 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"os/exec"
+	"strings"
+	"text/tabwriter"
 )
 
 // $ kaggle datasets list --help
@@ -46,28 +51,79 @@ func list() (res []string) {
 	args = append(args, "--file-type")
 	args = append(args, "csv")
 	args = append(args, "--min-size")
-	args = append(args, "102400000")
-	args = append(args, "--max-size")
 	args = append(args, "1024000000")
+	args = append(args, "--max-size")
+	args = append(args, "4048000000")
 	args = append(args, "-p")
 
-	for page := 1; page <= 3; page++ {
+	records := make([][]string, 0)
+
+	for page := 1; page <= 10; page++ {
 
 		args = append(args, fmt.Sprintf("%d", page))
-
 		cmd := exec.Command("kaggle", args...)
+		args = args[:len(args)-1]
+
 		cmb, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
-		fmt.Println(string(cmb))
+		lines := strings.Split(string(cmb), "\n")
 
-		args = args[:len(args)-1]
+		if len(lines) >= 1 && lines[0] == "No datasets found" {
+			break
+		}
+		if len(lines) >= 2 {
+			r := csv.NewReader(strings.NewReader(strings.Join(lines[1:], "\n")))
+
+			for {
+				record, err := r.Read()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// fmt.Println(record)
+				records = append(records, record)
+			}
+		}
 	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
+	for _, r := range records {
+		for _, f := range r {
+			fmt.Fprint(w, f+"\t")
+		}
+		fmt.Fprintln(w)
+	}
+	w.Flush()
 
 	return
 }
 
+// $ kaggle datasets files --help
+// usage: kaggle datasets files [-h] [-v] [dataset]
+//
+// optional arguments:
+//   -h, --help  show this help message and exit
+//   dataset     Dataset URL suffix in format <owner>/<dataset-name> (use "kaggle datasets list" to show options)
+//   -v, --csv   Print results in CSV format (if not set print in table format)
+//
+func files(dataset string) {
+
+	// kaggle datasets files --csv kentonnlp/2014-new-york-city-taxi-trips
+	cmd := exec.Command("kaggle", "datasets", "files", "--csv", dataset)
+	cmb, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	fmt.Println(string(cmb))
+
+}
+
 func main() {
-	list()
+	// list()
+	files("new-york-city/nyc-parking-tickets")
 }
