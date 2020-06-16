@@ -120,10 +120,37 @@ func files(dataset string) {
 		log.Fatalf("%v", err)
 	}
 	fmt.Println(string(cmb))
+}
 
+// $ kaggle datasets download --help
+// usage: kaggle datasets download [-h] [-f FILE_NAME] [-p PATH] [-w] [--unzip]
+//                                 [-o] [-q]
+//                                 [dataset]
+//
+// optional arguments:
+//   -h, --help            show this help message and exit
+//   dataset               Dataset URL suffix in format <owner>/<dataset-name> (use "kaggle datasets list" to show options)
+//   -f FILE_NAME, --file FILE_NAME
+//                         File name, all files downloaded if not provided
+//                         (use "kaggle datasets files -d <dataset>" to show options)
+//   -p PATH, --path PATH  Folder where file(s) will be downloaded, defaults to current working directory
+//   -w, --wp              Download files to current working path
+//   --unzip               Unzip the downloaded file. Will delete the zip file when completed.
+//   -o, --force           Skip check whether local version of file is up to date, force file download
+//   -q, --quiet           Suppress printing information about the upload/download progress
+func download(dataset string) {
+
+	// kaggle datasets download --unzip
+	cmd := exec.Command("kaggle", "datasets", "download", "--unzip", dataset)
+	cmb, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	fmt.Println(string(cmb))
 }
 
 func main() {
 	// list()
-	files("new-york-city/nyc-parking-tickets")
+	// files("new-york-city/nyc-parking-tickets")
+	download("new-york-city/nyc-parking-tickets")
 }
