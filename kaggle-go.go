@@ -1,14 +1,12 @@
-package main
+package kaggle
 
 import (
 	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
-	"text/tabwriter"
 )
 
 // $ kaggle datasets list --help
@@ -36,7 +34,7 @@ import (
 //   --max-size MAX_SIZE   Specify the maximum size of the dataset to return (bytes)
 //   --min-size MIN_SIZE   Specify the minimum size of the dataset to return (bytes)
 //
-func list() (res []string) {
+func ListByVotesPopularity(minSize, maxSize, maxEntries int) (entries [][]string) {
 
 	// kaggle datasets list --csv --file-type csv --min-size 1024000000 --max-size 1096000000 -p 1
 
@@ -51,14 +49,14 @@ func list() (res []string) {
 	args = append(args, "--file-type")
 	args = append(args, "csv")
 	args = append(args, "--min-size")
-	args = append(args, "1024000000")
+	args = append(args, fmt.Sprintf("%d", minSize))
 	args = append(args, "--max-size")
-	args = append(args, "4048000000")
+	args = append(args, fmt.Sprintf("%d", maxSize))
 	args = append(args, "-p")
 
-	records := make([][]string, 0)
+	entries = make([][]string, 0)
 
-	for page := 1; page <= 10; page++ {
+	for page := 1; ; page++ {
 
 		args = append(args, fmt.Sprintf("%d", page))
 		cmd := exec.Command("kaggle", args...)
@@ -86,19 +84,14 @@ func list() (res []string) {
 				}
 
 				// fmt.Println(record)
-				records = append(records, record)
+				entries = append(entries, record)
 			}
 		}
-	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
-	for _, r := range records {
-		for _, f := range r {
-			fmt.Fprint(w, f+"\t")
+		if len(entries) >= maxEntries {
+			break
 		}
-		fmt.Fprintln(w)
 	}
-	w.Flush()
 
 	return
 }
@@ -111,7 +104,7 @@ func list() (res []string) {
 //   dataset     Dataset URL suffix in format <owner>/<dataset-name> (use "kaggle datasets list" to show options)
 //   -v, --csv   Print results in CSV format (if not set print in table format)
 //
-func files(dataset string) {
+func Files(dataset string) {
 
 	// kaggle datasets files --csv kentonnlp/2014-new-york-city-taxi-trips
 	cmd := exec.Command("kaggle", "datasets", "files", "--csv", dataset)
@@ -120,6 +113,7 @@ func files(dataset string) {
 		log.Fatalf("%v", err)
 	}
 	fmt.Println(string(cmb))
+
 }
 
 // $ kaggle datasets download --help
@@ -138,19 +132,13 @@ func files(dataset string) {
 //   --unzip               Unzip the downloaded file. Will delete the zip file when completed.
 //   -o, --force           Skip check whether local version of file is up to date, force file download
 //   -q, --quiet           Suppress printing information about the upload/download progress
-func download(dataset string) {
+func Download(dataset, path string) {
 
 	// kaggle datasets download --unzip
-	cmd := exec.Command("kaggle", "datasets", "download", "--unzip", dataset)
+	cmd := exec.Command("kaggle", "datasets", "download", "--path", path, "--unzip", dataset)
 	cmb, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 	fmt.Println(string(cmb))
-}
-
-func main() {
-	// list()
-	// files("new-york-city/nyc-parking-tickets")
-	download("new-york-city/nyc-parking-tickets")
 }
